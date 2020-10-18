@@ -1,0 +1,54 @@
+---
+title: "BDA 503 - Assignment 1"
+author: "Bilgen Yılmaz"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Summary
+
+My name is Bilgen Yılmaz, after I graduated from ITU Industrial Engineering Department, I started to works as Marketing Specialist and with this job I started to manage digital accounts (Google Analytics, Google Adwords, Facebook etc.) of the company I worked. As I begin to learn more about digital world I decided to continue my career around e-business. And in e-commerce, data is everywhere! Being able to understanding data is extremly important in order to achieve business goals.
+
+Currently I am working at Digiturk as a Base Management Specialist, my main responsibilites is to anlyze customer and improve both platform and revenue. I have been working in e-commerce area for 4 years now and I want to analyze customer/ clickstream data more professionally, with this program, I am willing to achieve this.
+
+You can see my job/ education past on my [Linkedin Page]( https://www.linkedin.com/in/bilgen-yilmaz/ ).
+
+**The speech I would like to discuss from R Consortium;**
+
+### [REAdi Tool: Using Shiny as a Tool for Real World Evidence Evaluation](https://www.youtube.com/watch?v=Welag5l9aW0)
+
+Speakers Brennan Beal and Beth Devine summs up their purpose to create READi tool as to use real world evidence data to give recommendations to the end users by considering their selections. They mainly focus on pharmaceuticals industry because of many reasons. But I found quite reasonable two of their suggestions;
+
+1) Randomized controlled group evidence may not be enough for whether to treatment a is better than treatment b. Brennan believes with the use of the real world data deciding process will be more efficient.
+
+2) Real world evidence tolls can help with underrepresented populations in medicine. 
+
+Although I liked the idea the speakers discussed, I found hard and confusing to use the tool when I tried.
+
+
+**Topics I found interesting to read;**
+
+### [Using Linear Programming to Optimise budget Allocation](https://rpubs.com/PE_Stat/569796)
+
+This article simply solves ad budget allocation problem which have different constraints in order to optimize the cost and revenue balance. Effectively managing certain amount of budget according to its outcomes is a real business problems. When it comes to ad budgets, campaign and constraints can counts over 1000. And it can be hard to manage via Excel. In this article, author gives an example with few business constraints in terms of ROI and budget limitations. By using Linear Programming Technique author optimizes outcomes then allocates budget to campaigns.
+
+### [Movie Recommendation System in R](https://rpubs.com/vsi/movielens) ###
+
+In this article, author creates a movie recommendation algorithm. I choose this topic because recommendation engines is really popular and effective for e-businesses in order to increase engagement. And also personalization is key to customer happiness. Author firstly determines his success objectives as having 'RMSE lower than 0.8649' and then details 4 processes of his work 'data preparation, data exploration, data cleaning and data modeling'. Authoe uses Linear Model to get the results, he tries different methods and compares them according to predetermines RMSE objective.
+
+
+### [Customer Segmentation for R Users](https://www.kdnuggets.com/2019/09/customer-segmentation-r-users.html)
+
+In his article, author shows us how he segmented his customer into three groups by using "most popular method for clustering" *k-means algorithm*. Author uses the invoice and customer tables, determines which attributes can be valuable for him and aggregates data into one table which has customer id as a unique identifier. Then he adds category score for each actor by taking ratio of the category in total purchases from that customer. In addition to k-means, author uses average silhouette technique to determine the cluster number. Because as far as I understand k-means doesn't give you the cluster number. At the end he compares and sees the differences among clusters he created and give clusters names.
+
+*Radar chart of the clusters;*
+![](https://appsilon.com/wp-content/uploads/2019/09/1radar1.png)
+
+Thank you for your time!
+
+
+```{r output, results='asis'}
+```
