@@ -1,5 +1,5 @@
-*First Assignment*
-You can see my first assignment [here](BDA503_Assignment1.html)
+
+You can see my **first assignment** [here](BDA503_Assignment1.html)
 
 ## Welcome to GitHub Pages
 
