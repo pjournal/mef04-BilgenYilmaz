@@ -1,0 +1,185 @@
+---
+title: "EPİAŞ September Energy Dataset Analysis"
+author: "Bilgen Yılmaz"
+output: 
+  html_document:
+    toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## First Look at Dataset
+After downloading the [dataset](https://rapor.epias.com.tr/rapor/xhtml/ptfSmfListeleme.xhtml) from [EPİAŞ official website](https://rapor.epias.com.tr/rapor/)
+Understanding the columns and dataset process began.
+
+Preparation was as follows, my table had non character values as column names due to language detection problem. So I changed the local language by using ` Sys.setlocale()` command.
+
+```{r first, results='hide', message=FALSE}
+library(tidyverse)
+library(lubridate)
+library(dplyr)
+library(ggplot2)
+
+Electricity_Data <- read.csv("C:/Users/cbilg/Documents/R/BDA503/Electricity_Assignment.csv")
+Sys.setlocale(locale="Turkish_Turkey.1254")
+
+```
+
+To see the main elements of data, I used `glimpse()` command. As result I saw some of my values seem like they are chars instead of numeric. Also my time stamp was inproper. So I started to adjust to table to understand better.
+
+```{r second, results='markup'}
+glimpse(Electricity_Data)
+
+```
+
+## Creating Adjusted Table
+While keeping old table, I created new table named `Electricity_Data_Adjusted` with the changes I wanted to make.
+
+### Column names
+
+I changed two of the column names to make it easier to read and use in codes.
+
+```{r third, results='markup'}
+Electricity_Data_Adjusted <- 
+  Electricity_Data %>% rename(poz_deng_fiyat = Pozitif.Dengesizlik.Fiyatı..TL.MWh.) %>% 
+  rename(neg_den_fiyat = Negatif.Dengesizlik.Fiyatı..TL.MWh.)
+
+```
+
+### Date formant
+
+```{r fourth, results='markup'}
+Electricity_Data_Adjusted$Tarih <- gsub(pattern = "\\.","-",Electricity_Data_Adjusted$Tarih)
+Electricity_Data_Adjusted$Tarih <- as.POSIXct(Electricity_Data_Adjusted$Tarih,format = "%d-%m-%y %H:%M")
+
+```
+
+### Column types
+
+```{r fifth, warning = FALSE}
+
+Electricity_Data_Adjusted$PTF <- gsub(pattern = ",",".",Electricity_Data_Adjusted$PTF)
+Electricity_Data_Adjusted$PTF <- as.double(Electricity_Data_Adjusted$PTF)
+
+Electricity_Data_Adjusted$SMF <- gsub(pattern = ",",".",Electricity_Data_Adjusted$SMF)
+Electricity_Data_Adjusted$SMF <- as.double(Electricity_Data_Adjusted$SMF)
+
+Electricity_Data_Adjusted$poz_deng_fiyat <- gsub(pattern = ",",".",Electricity_Data_Adjusted$poz_deng_fiyat)
+Electricity_Data_Adjusted$poz_deng_fiyat <- as.double(Electricity_Data_Adjusted$poz_deng_fiyat)
+
+Electricity_Data_Adjusted$neg_den_fiyat <- gsub(pattern = ",",".",Electricity_Data_Adjusted$neg_den_fiyat)
+Electricity_Data_Adjusted$neg_den_fiyat <- as.double(Electricity_Data_Adjusted$neg_den_fiyat)
+
+```
+
+### Summary of the final table
+
+Finally, adjusted table's key metrics are as follows:
+
+```{r sixth, results='markup'}
+summary(Electricity_Data_Adjusted)
+
+```
+
+## Analysis of Dataset
+
+As I looked into the table, energy need of summarized in three categorical value under the `SMF.Yön` column. `SMF.Yön`grouped summarized values were needed.
+We can see when the energy imbalance is zero average PTF and SMF have the same value.
+
+```{r seventh, results='markup', message=FALSE}
+Electricity_Data_Adjusted %>%
+  group_by(SMF.Yön) %>%
+  summarize(tot_SMF = sum(SMF, na.rm=T), tot_PTF = sum(PTF), tot_PozDenge = sum(poz_deng_fiyat), 
+            tot_NegDenge = sum(neg_den_fiyat, na.rm=T), avg_SMF =mean(SMF, na.rm=T), avg_PTF =mean(PTF))
+
+```
+
+### Examining the dataset daily basis
+Using `Lubridate` library, I created daily total table for dataset.
+
+```{r eighth, results='markup', message=FALSE}
+Electricity_Data_Daily2 <- Electricity_Data_Adjusted %>%
+  group_by(date = lubridate::date(Tarih)) %>%
+  summarize(tot_SMF = sum(SMF, na.rm=T), tot_PTF = sum(PTF), tot_PozDenge = sum(poz_deng_fiyat), tot_NegDenge = sum(neg_den_fiyat),
+            avg_SMF = mean(SMF, na.rm=T), avg_PTF = mean(PTF))
+
+```
+
+### Daily key metrics' visualization
+
+This graph is showing us the daily average SMF value change over time. 
+```{r nineth, results='markup', message=FALSE}
+ggplot(Electricity_Data_Daily2, aes(x=date, y=avg_SMF))+
+  geom_line()+
+  labs(title="Daily Avg. SMF Graph",x ="Date", y = "Avg. SMF")  
+
+```
+
+This graph is showing us the daily average PTF value change over time. 
+```{r tenth, results='markup', message=FALSE}
+ggplot(Electricity_Data_Daily2, aes(x=date, y=avg_PTF))+
+  geom_line()+
+  labs(title="Daily Avg. PTF Graph",x ="Date", y = "Avg. PTF") 
+
+```
+
+### Analyzing daily values grouped by `SMF.Yön`
+
+Daily values grouped by `SMF.Yön`and date.
+```{r daily_data, results='markup', message=FALSE}
+Electricity_Data_Daily <- Electricity_Data_Adjusted %>%
+  group_by(date = lubridate::date(Tarih), SMF.Yön) %>%
+  summarize(tot_SMF = sum(SMF), tot_PTF = sum(PTF), tot_PozDenge = sum(poz_deng_fiyat), tot_NegDenge = sum(neg_den_fiyat),
+            avg_SMF = mean(SMF), avg_PTF = mean(PTF))
+
+```
+
+Bar plot of Energy Status on a daily basis to see their frequencies in September.
+```{r daily_data_bar_graph, results='markup', message=FALSE}
+ggplot(Electricity_Data_Daily, aes(x=SMF.Yön, fill=SMF.Yön))+
+  geom_histogram(stat = "count")+
+  labs(title="Electricity Status Histogram",x ="Status", y = "Total Count")
+
+```
+
+### Examining the dataset hourly basis
+
+Examining the data set hourly basis:
+```{r eleventh, results='markup', message=FALSE}
+Electricity_Data_Hourly <- Electricity_Data_Adjusted %>%
+  group_by(hour = lubridate::hour(Tarih)) %>%
+  summarize(tot_SMF = sum(SMF, na.rm=T), tot_PTF = sum(PTF), tot_PozDenge = sum(poz_deng_fiyat), tot_NegDenge = sum(neg_den_fiyat),
+            avg_SMF = mean(SMF, na.rm=T), avg_PTF = mean(PTF))
+
+```
+
+### Hourly key metrics' visualization
+
+This graph is showing us the hourly average SMF value change over time. 
+```{r hourly_smf_graph, results='markup', message=FALSE}
+ggplot(Electricity_Data_Hourly, aes(x=hour, y=avg_SMF))+
+  geom_line()+
+  labs(title="Hourly Avg. SMF Graph",x ="Hour", y = "Avg. SMF")  
+
+```
+
+This graph is showing us the hourly average PTF value change over time. 
+```{r hourly_ptf_graph, results='markup', message=FALSE}
+ggplot(Electricity_Data_Hourly, aes(x=hour, y=avg_PTF))+
+  geom_line()+
+  labs(title="Hourly Avg. PTF Graph",x ="Hour", y = "Avg. PTF") 
+
+```
+
+This graph shows us comparison between hourly avg. SMF and hourly avg. PTF in a scatter plot: 
+```{r smf_Vs_ptf, results='markup', message=FALSE}
+ggplot(Electricity_Data_Hourly, aes(x=avg_SMF, y=avg_PTF))+
+  geom_point()+
+  labs(title="SMF vs. PTF Scatter",x ="Avg. Hourly SMF", y = "Avg. Hourly PTF") 
+
+```
+
+
+
