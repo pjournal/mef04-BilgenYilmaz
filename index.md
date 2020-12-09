@@ -11,3 +11,5 @@ Shiny App for **First Group Assignment** [here](https://alihan.shinyapps.io/ISBI
 Group Project
 
 * [Project Proposal](https://pjournal.github.io/mef04g-bak-r-iz/Group-project.html)
+
+* [Exploratory Data Analysis](https://pjournal.github.io/mef04g-bak-r-iz/ExpDataAnl.html)
