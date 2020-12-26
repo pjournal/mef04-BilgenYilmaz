@@ -1,0 +1,325 @@
+---
+title: "Diamonds Price Estimation"
+author: "Bilgen Yılmaz"
+output: 
+  html_document:
+    toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(tidyverse) 
+library(rpart)
+library(rpart.plot)
+library(rattle)
+library(ggplot2)
+library(dplyr)
+
+```
+
+## Summary
+
+Diamonds dataset consists of 10 columns and 53,940 rows. Colums are as follows;
+
+  * `cut` : ordinal value of cut shape of the diamond. Values : Fair < Good < Very Good < Premium < Ideal
+  * `carat` : numeric value of carats in a diamond
+  * `clarity` : ordinal value of diamond's clarity.  Values : I1 < SI2 < SI1 < VS2 < VS1 < VVS2 < VVS1 < IF
+  * `color` : ordinal value of diamond's color  Values : D < E < F < G < H < I < J
+  * `depth` : numeric value of depth in a diamond
+  * `table` : numeric value of diamonds flat surface on its facet
+  * `price` : price of the diamond
+  * `x` : numeric value
+  * `y` : numeric value
+  * `z` : numeric value
+  
+
+```{r diamonds}
+summary(diamonds)
+```
+
+## Explanatory Data Analysis and Plots
+
+We are expecting to find price value of an diamond by looking at its other attributes. Firstly we will examine columns' relation with price values in further plots.
+
+### Plots for ordinal columns
+
+In below tables, 'Cut', 'Clarity', 'Color' columns examined to see if there is a difference between factor in terms of 'Price'.
+
+```{r plots1, figures-side, fig.show="hold", out.width="30%", echo=FALSE, message=FALSE, warning=FALSE}
+diamonds %>% select(cut, price) %>% group_by(cut) %>% ggplot(aes(x=cut, y=price)) + geom_violin(scale='area') + labs(title =" Cut Plot by Price", x = "Cut", y = "Price") 
+diamonds %>% select(clarity, price) %>% ggplot(aes(x=clarity, y=price)) + geom_violin(scale='area') + labs(title =" Clarity Plot by  Price", x = "Clarity", y = "Price") 
+diamonds %>% select(color, price) %>% ggplot(aes(x=color, y=price)) + geom_violin(scale='area') + labs(title =" Color Plot by Price", x = "Color", y = "Price") 
+```
+
+### Plots for numeric columns
+
+In below tables, 'Carat', 'Depth', 'X', 'Y', 'Z' columns examined to see if there is a relation/ trend with 'Price'
+
+```{r plots2, figures-side, fig.show="hold", out.width="30%", echo=FALSE, message=FALSE, warning=FALSE}
+diamonds %>% select(carat, price) %>% ggplot(aes(x=carat, y=price)) + geom_smooth(position='jitter') + geom_line(alpha= .2, aes(color = 'steelblue')) + labs(title =" Carat vs. Price", x = "Carat", y = "Price") 
+diamonds %>% select(depth, price) %>% ggplot(aes(x=depth, y=price)) + geom_smooth(position='jitter') + geom_line(alpha= .2, aes(color='steelblue'))  + labs(title =" Depth vs. Price", x = "Depth", y = "Price") 
+diamonds %>% select(x, price) %>% ggplot(aes(x= x, y=price)) + geom_point(aes(alpha=0.05)) +geom_smooth(position='jitter') + labs(title =" X vs. Price", x = "X", y = "Price") 
+diamonds %>% select(y, price) %>% ggplot(aes(x= y, y=price)) + geom_point(aes(alpha=0.05)) +geom_smooth(position='jitter') + labs(title =" Y vs. Price", x = "Y", y = "Price")
+diamonds %>% select(z, price) %>% ggplot(aes(x= z, y=price)) + geom_point(aes(alpha=0.05)) +geom_smooth(position='jitter') + labs(title =" Z vs. Price", x = "Z", y = "Price")
+```
+
+
+### Key Findings
+
+
+* Cut, clarity, color has different scale of price frequency in them. Though it seem avg. price for types doesn't varies a lot.
+* At some level, X, Y, Z attributes has a rising trend with price.
+* Carat attribute has a rising trend with price.
+* Depth doesn't seem to have an effect on price.
+
+
+## PCA Analysis
+
+To understand which column has higher correlation with price and to understand if we can do factor reduction, I did PCA analysis on data set. But because `cut`, `color`, `clarity` are not numerical, I transformed them into numerical values then applied PCA Analysis.
+
+```{r numerictable, echo=FALSE, message=FALSE, warning=FALSE}
+diamonds_numeric <- diamonds %>%
+  transmute(color_n = as.numeric(diamonds$color),price,x,y,z, carat,
+            cut_n = as.numeric(diamonds$cut),
+            clarity_n =as.numeric(diamonds$clarity),
+            color_n=as.numeric(diamonds$color))
+# Correlation matrix of variables
+cor(diamonds_numeric)
+dia_pca_result3<-princomp(diamonds_numeric,cor=T)
+# Summary PCA Result
+summary(dia_pca_result3)
+
+```
+
+From correlation matrix, we can say 'X', 'Y', 'Z' and 'Carat' columns have the highest correlation with price. Meanwhile clarity has the highest negative correlation with price.
+From PCA Analysis, we can say that with 5 component, we can explain %98.88 of the data.
+
+## CART Model
+
+### Model with 4 variable
+
+According to PCA and correlation matrix. With 5 components I can explain %98.88 of the data. So I choose `carat`, `x`, `y`, `z` and `price` columns for the first model.
+
+```{r cartmodel1, echo=FALSE, message=FALSE, warning=FALSE}
+set.seed(503)
+diamonds_1 <- diamonds %>% select(carat, x,y,z,price)
+diamonds_test1 <- diamonds_1 %>% mutate(diamond_id = row_number()) %>% 
+  sample_frac(0.2) %>% ungroup()
+
+diamonds_train1 <- anti_join(diamonds_1 %>% mutate(diamond_id = row_number()), 
+                            diamonds_test1, by = "diamond_id")
+
+diamonds_model1 <- rpart(price ~ ., data=diamonds_train1%>% select(-diamond_id))
+fancyRpartPlot(diamonds_model1)
+
+```
+
+#### Sample Check
+
+In `price_difference` column I have calculated the percentage of the difference between predicted price value and actual price.
+In summary table, we can see we have a mean of %15 price difference. And between 1st and 3rd quartile we predicted price within -%15 and %38 range.
+
+```{r modelcheck1, echo=FALSE, message=FALSE, warning=FALSE}
+
+diamond_predict_1 <- predict(diamonds_model1)
+
+in_sample_prediction <-
+  cbind(
+    diamond_predict_1 %>% tbl_df %>%
+      transmute(price_predict = value),
+    diamonds_train1 %>% tbl_df %>%
+      transmute(price_actual = price)
+  ) %>%
+  mutate(price_difference = ((price_predict-price_actual)/(price_actual)))
+
+summary(in_sample_prediction)
+
+```
+
+
+**Line plots of actual, predicted and difference columns of sample data**
+
+```{r modelcheck12, figures-side, fig.show="hold", out.width="50%", echo=FALSE, message=FALSE, warning=FALSE}
+
+ggplot(in_sample_prediction, aes(price_difference)) +
+  geom_freqpoly(binwidth = 0.1)
+ggplot(in_sample_prediction, aes(price_actual, color='blue')) +
+  geom_freqpoly(binwidth = 250) +
+  geom_freqpoly(aes(x=price_predict, color='green')) +
+  labs(x = "Price")
+
+```
+
+
+#### Test Check
+
+In `price_difference` column I have calculated the percentage of the difference between predicted price value and actual price.
+Likewise sample summary table, we have a mean of %15 in `price_difference` column.
+
+```{r testcheck1, echo=FALSE, message=FALSE, warning=FALSE}
+
+diamond_predict_2 <- predict(diamonds_model1,newdata=diamonds_test1)
+
+out_of_sample_prediction <-
+  cbind(
+    diamond_predict_2 %>% tbl_df %>%
+      transmute(price_predict = value),
+    diamonds_test1 %>% tbl_df %>%
+      transmute(price_actual = price)
+  ) %>%
+  mutate(price_difference = ((price_predict/price_actual)-1))
+
+summary(out_of_sample_prediction)
+
+```
+
+**Line plots of actual, predicted and difference columns of sample data**
+
+```{r testcheck12, figures-side, fig.show="hold", out.width="50%", echo=FALSE, message=FALSE, warning=FALSE}
+
+ggplot(out_of_sample_prediction, aes(price_difference)) +
+  geom_freqpoly(binwidth = 0.1)
+
+ggplot(out_of_sample_prediction, aes(price_actual, color='blue')) +
+  geom_freqpoly(binwidth = 250) +
+  geom_freqpoly(aes(x=price_predict, color='green'))+
+  labs(x = "Price")
+
+```
+
+
+#### Differences
+
+
+```{r differencecheck1, echo=FALSE, message=FALSE, warning=FALSE}
+out_sample_prediction_sq <- out_of_sample_prediction %>% mutate(price_diff_value = price_predict-price_actual)
+rmse1 <- sqrt(mean(out_sample_prediction_sq$price_diff_value^2)) 
+
+
+in_sample_prediction_sq <- in_sample_prediction %>% mutate(price_diff_value = price_predict-price_actual)
+rmse2 <- sqrt(mean(in_sample_prediction_sq$price_diff_value^2)) 
+
+  
+percent_sample1 <- in_sample_prediction %>% filter(between(price_difference,-0.20, 0.20)) %>% summarise(count=n()) / in_sample_prediction %>% summarise(count=n())
+percent_test1 <- out_of_sample_prediction %>% filter(between(price_difference,-0.20, 0.20)) %>% summarise(count=n()) / out_of_sample_prediction %>% summarise(count=n())
+
+```
+
+To sum up, we can say we have mean price difference in value as `r rmse2` in sample and `r rmse1` in test data. %`r percent_sample1*100` of our predicted prices fell %20 above or %20 below of the actual prices in sample data. %`r percent_test1*100` of our predicted prices fell %20 above or %20 below of the actual prices in test data
+
+
+### Model with all columns
+
+Thus we saw the correlation matrix, with ordinal values converted to numeric values isn't a solid example of PCA Analysis. So I did CART with using all of the columns.
+
+```{r cartmodel2, echo=FALSE, message=FALSE, warning=FALSE}
+set.seed(503)
+diamonds_test <- diamonds %>% mutate(diamond_id = row_number()) %>% 
+  group_by(cut, color, clarity) %>% sample_frac(0.2) %>% ungroup()
+
+diamonds_train <- anti_join(diamonds %>% mutate(diamond_id = row_number()), 
+                            diamonds_test, by = "diamond_id")
+#running model
+
+diamonds_model <- rpart(price ~ ., data=diamonds_train%>% select(-diamond_id))
+fancyRpartPlot(diamonds_model)
+
+```
+
+As you can see from the table, With all of the columns `clarity`column made it its way to the decision criterias.
+
+#### Sample Check
+
+Sample and test data checked as the first CART model. With second CART, we have a difference mean of %14 and first quartile and third quartile are -%15, %35 respectively.
+
+```{r modelcheck2, echo=FALSE, message=FALSE, warning=FALSE}
+
+diamond_predict_3 <- predict(diamonds_model)
+
+in_sample_prediction2 <-
+  cbind(
+    diamond_predict_3 %>% tbl_df %>%
+      transmute(price_predict = value),
+    diamonds_train %>% tbl_df %>%
+      transmute(price_actual = price)
+  ) %>%
+  mutate(price_difference = ((price_predict-price_actual)/(price_actual)))
+
+summary(in_sample_prediction2)
+
+```
+
+**Line plots of actual, predicted and difference columns of sample data**
+
+```{r modelplot2, figures-side, fig.show="hold", out.width="50%", echo=FALSE, message=FALSE, warning=FALSE }
+ggplot(in_sample_prediction2, aes(price_difference)) +
+  geom_freqpoly(binwidth = 0.1)
+
+ggplot(in_sample_prediction2, aes(price_actual, color='blue')) +
+  geom_freqpoly(binwidth = 250) +
+  geom_freqpoly(aes(x=price_predict, color='green')) +
+  labs(x = "Price")
+
+```
+
+#### Test Check
+
+Close to sample check table. We have a mean of %14 in terms of price difference. And first quartile and third quartile are -%15 and %35 respectively.
+
+```{r testcheck2, echo=FALSE, message=FALSE, warning=FALSE}
+diamond_predict_4 <- predict(diamonds_model,newdata=diamonds_test)
+
+out_of_sample_prediction2 <-
+  cbind(
+    diamond_predict_4 %>% tbl_df %>%
+      transmute(price_predict = value),
+    diamonds_test %>% tbl_df %>%
+      transmute(price_actual = price)
+  ) %>%
+  mutate(price_difference = ((price_predict/price_actual)-1))
+
+summary(out_of_sample_prediction2)
+
+```
+
+**Line plots of actual, predicted and difference columns of test data**
+
+```{r testcheck13, figures-side, fig.show="hold", out.width="50%", echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(out_of_sample_prediction2, aes(price_difference)) +
+  geom_freqpoly(binwidth = 0.1)
+
+ggplot(out_of_sample_prediction2, aes(price_actual, color='blue')) +
+  geom_freqpoly(binwidth = 250) +
+  geom_freqpoly(aes(x=price_predict, color='green')) +
+  labs(x = "Price")
+
+```
+
+```{r differencecheck2, echo=FALSE, message=FALSE, warning=FALSE}
+out_sample_prediction_sq2 <- out_of_sample_prediction2 %>% mutate(price_diff_value = price_predict-price_actual)
+rmse4 <- sqrt(mean(out_sample_prediction_sq2$price_diff_value^2)) 
+
+
+in_sample_prediction_sq2 <- in_sample_prediction2 %>% mutate(price_diff_value = price_predict-price_actual)
+rmse3 <- sqrt(mean(in_sample_prediction_sq2$price_diff_value^2)) 
+
+  
+percent_sample2 <- in_sample_prediction2 %>% filter(between(price_difference,-0.20, 0.20)) %>% summarise(count=n()) / in_sample_prediction %>% summarise(count=n())
+percent_test2 <- out_of_sample_prediction2 %>% filter(between(price_difference,-0.20, 0.20)) %>% summarise(count=n()) / out_of_sample_prediction %>% summarise(count=n())
+
+```
+
+We can say we have mean price difference in value as `r rmse3` in sample and `r rmse4` in test data
+%`r percent_sample2 * 100` of our predicted prices fell %20 above or %20 below of the actual prices in sample data
+%`r percent_test2 * 100` of our predicted prices fell %20 above or %20 below of the actual prices in test data
+
+
+Differences in values and the total number of the predicted values fall between -%20 to %20 from actual values was higher in the second CART. So I choose to go with all the columns in data table.
+
+#### References
+
+http://www.sthda.com/english/articles/31-principal-component-methods-in-r-practical-guide/114-mca-multiple-correspondence-analysis-in-r-essentials/
+https://alice86.github.io/2018/04/08/Factor-Analysis-on-Ordinal-Data-example-in-R-(psych,-homals)/
+https://rpubs.com/DocOfi/342740
+https://mef-bda503.github.io/archive/fall17/files/intro_to_ml.html#properties
+https://mef-bda503.github.io/archive/fall17/files/intro_to_ml_2.html
