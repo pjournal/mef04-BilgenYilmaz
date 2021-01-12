@@ -15,3 +15,5 @@ Group Project
 * [Project Proposal](https://pjournal.github.io/mef04g-bak-r-iz/Group-project.html)
 
 * [Exploratory Data Analysis](https://pjournal.github.io/mef04g-bak-r-iz/ExpDataAnl.html)
+
+* [Final Report](https://pjournal.github.io/mef04g-bak-r-iz/Group-Project-Final-Report.html)
