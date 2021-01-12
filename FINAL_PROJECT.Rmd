@@ -1,0 +1,221 @@
+---
+title: "FINAL PROJECT"
+author: "Bilgen Yılmaz"
+date: "1/10/2021"
+output: 
+    html_document:
+      toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(lubridate)
+library(tidyverse)
+library(ggplot2)
+library(reshape2)
+library(zoo)
+summary_price_merged <- readRDS("C://Users/cbilg/Documents/summary-price.RDS")
+parkcapacity <- readRDS("C:/Users/cbilg/Documents/R/GroupAssignment_bakRiz/parkcapacitylog.RDS")
+parkinfo <- readRDS("C:/Users/cbilg/Documents/R/GroupAssignment_bakRiz/ispark-parkbilgileri.RDS")
+parkucret <- readxl::read_xlsx("C:/Users/cbilg/Documents/ispark_ucret.xlsx")
+```
+
+# PART 1
+
+## Question 1
+
+Timnut Gebru had been fired by Google because she co-wrote a paper which discusses the potential downsides of the large language models. She was co-head of Google’s ethical AI team and was working on a paper with 5 other collaborators and to my understanding she mailed Google’s Head of AI Jeff Dean about paper they were working on and ask for feedbacks& comments. After that she claimed she was fired immediately.
+
+I want to discuss this controversy in two aspects, first freedom of researches and second AI ethics. In terms of freedom of research, I strongly disagree with the firing decision after a worker had made a research that may have include findings against company’s interest. There are so many ways other than this such as taking into a consideration of the critics and finding a solution to improve your workflows according to it. But I do not believe in this system any company who has an image or profit concerns will do the right thing when they feel threatened. 
+
+In terms of AI Ethics, main points made by paper was energy efficiency of language models, unbiased and manageable data and manipulation of meaning. I think environmental concerns for big models shown in article is critical and can really make a positive effect in consumption since their usage will probably increase in future.
+
+For unbiased and manageable data, paper claimed that since data of language collected from internet without filtering it can include sexist and racist words. Though I believe these are wrong and can affect results, otherwise would be a manipulation of inputs by human hand. And for my opinion manipulation by human hand is as dangerous as this. Because if someone will define ‘normal’ or ‘ethical’ for language inputs – a company, government etc. – it also made me think why this acceptance are true and normal? Isn’t there a chance this definition of ‘normal’ work for a favor of their creators? For example, let’s say we have 100 people searching on Google; 20 of them are criminals, 40 of them white collars, 30 of blue collars, 10 of them unemployed. Why should algorithms take a consider of people types and excludes criminals from their inputs? For equality I believe raw data will do a better job than manipulated – human work included- data. Still there is a problem stated in paper with ignoring some languages whom have a searching volume but doesn’t take into an account because they are spoken in poor countries should be considered by models maybe localized models would do better jobs.
+
+For abusing results to impact users of Google is a serious concern and I am pretty sure data outcomes, or any information are used for guide population opinion by government and companies. But even before AI and Google, manipulation of population was being done, besides online still offline marketing is being done. The main problem here is that Google, internet and AI regulations are new and insufficient (since the topics new), I believe heavy regulations are yet to come and after regulations these manipulations can be done in more acceptable ways.
+
+
+## Question 2
+
+Approximately %35-%65 (gut feeling& experience to data&forecast) would be optimum, I guess. In order to do effective technical analysis and data you should now domain very well. Otherwise a decision solely based on data and forecast can lead you to wrong direction also. But gut feeling and experience percentage shouldn’t be high because with that objectivity are lost and you can be blinded by your opinions.
+
+
+## Question 3
+
+If I would want to show nottem in one plot I wanted to show the temperature by month. And for each year I would like to show different color in same graph. But I couldn’t reach my initial intent with coding. And closest thin is as follows. We can see average line with geom_smooth and we can see the temperatures for each year with geom_point. 
+
+```{r message=FALSE, warning=FALSE}
+nottem_adj <- data.frame(
+yaermonth = as.Date(as.yearmon(time(nottem))), Temprature = melt(nottem))
+nottem_adj$value <- as.double(nottem_adj$value)
+Yearly_nottem <- nottem_adj %>% group_by(year = lubridate::year(yaermonth))
+ggplot(Yearly_nottem, aes(x=lubridate::month(yaermonth), y=value, color=year))+ geom_point()+ geom_smooth() +
+labs(title =" Temp. Change", x = "Month", y = "Temperature") 
+
+```
+
+# PART 2
+
+## New Analysis for Group Project
+
+In our group project, we examine ISPARK data. From these data we have occupancy of park through 14 days and we have their average monthly prices for monthly subscriptions.
+
+* First I checked for minimum and maximum occupancy rates of each parks during 14 days.
+
+* Second I assume a parks' minimum occupancy for 11 days can give me its monthly subscribed cars, so I calculated monthly revenue for parks.
+
+In below table you can see the most profitable parks during 18 November - 29 November 2020. And their predicted monthly revenues according to minimum occupancy rate during 18 Nov - 29 Nov.
+
+```{r group1, figures-side2, fig.show="hold", out.width="50%", echo=TRUE, message=FALSE, warning=FALSE}
+
+mergedtable <- merge(x = parkcapacity, y = parkinfo, by = "ParkID", all.x = TRUE)
+
+park_geliri_aylik <- 
+  mergedtable %>% filter(ParkTipi != "TAKSİ PARK") %>%
+  select(Ilce, ParkTipi,ParkID, ParkAdi.x, DolulukYuzdesi, AylikAbonelikÜcreti, Kapasitesi) %>%
+  group_by(Ilce,ParkID, ParkAdi.x,ParkTipi, AylikAbonelikÜcreti, Kapasitesi)%>%
+  summarise(min_doluluk= min(DolulukYuzdesi), max_doluluk=max(DolulukYuzdesi))
+
+aylik_abone_geliri <- park_geliri_aylik %>% summarise(gelir_abone = AylikAbonelikÜcreti*min_doluluk* Kapasitesi) %>% arrange(desc(gelir_abone))
+
+aylik_abone_geliri %>% head(20)
+```
+
+I created two plots for Park Types and Districts by their predicted monthly revenue in November 2020.
+
+It is interesting that Eyüp has the highest revenue among districts because in our park count table, Eyüp was 16th district to have most parks. And besides Eyüp park count and revenue table seems parallel. We may say that even though Eyüp's parks are less than Bakırköy, Fatih, Şişli, Beyoğlu, due to its capacity and occupancy rate it has higher monthly revenue in November 2020.
+
+Park type's revenue seem to have a positive correlation by their total capacity. (You can check our group's final report to see park type's total capacities)
+
+```{r group2, figures-side2, fig.show="hold", out.width="50%", echo=TRUE, message=FALSE, warning=FALSE}
+
+aylik_abone_geliri %>% select(Ilce, gelir_abone) %>% group_by(Ilce) %>% summarise(tot_gelir=sum(gelir_abone)) %>%
+  ggplot(aes(x=reorder(Ilce, tot_gelir), y=tot_gelir))+
+  geom_bar(position = "stack", stat = "identity")+
+  coord_flip()+
+  labs(title ="Total Revenue by Monthly Subs by District", x = "District", y = "Revenue")
+
+aylik_abone_geliri %>% select(ParkTipi, gelir_abone) %>% group_by(ParkTipi) %>% summarise(tot_gelir=sum(gelir_abone))%>%
+  ggplot(aes(x=reorder(ParkTipi, tot_gelir), y=tot_gelir, fill=ParkTipi))+
+  geom_bar(position = "stack", stat = "identity")+
+  coord_flip()+
+  labs(title ="Total Revenue by Monthly Subs by Park Type", x = "Park Type", y = "Revenue")
+
+```
+
+# PART 3
+
+## Question 1
+
+For RData file click [here.](https://drive.google.com/drive/folders/1HljTPD587jahwFPXw-m60ZRwradrNYKy?usp=sharing)
+
+You will find 3 tables in this RData file;
+
+* `summary_price_merged`: Target Revisions and Summary tables bonded and merged – common columns excluded
+
+* `all_merged`: Estimate Revisions, Target Revisions and Summary tables bonded and merged 
+
+*	`prediction_table`: Estimate Revisions tables merged
+
+
+## Question 2
+
+Dataset I will be using includes both `Target Price Revisions` and `Summary` tables.
+*We have 2 NA's in data so in later tables we will exclude them from further calculation.*
+
+```{r echo=TRUE}
+
+colnames(summary_price_merged)
+
+```
+
+### Potentials by Sector
+
+
+First, I wanted to look if I had money which sectors would be more logical to invest according to data.
+In first table it seemed that Industry sector has the least total potential for investing. Although when I look by company code, 8 out of top 10 potential is belong to Industry sector. And also 10 out of 10 least potential companies are in Industry sector.
+
+To sum up, investing on banks seems more rewarding however investing on Industry can be risky but rewards could be higher than other sectors either.
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+summary_price_merged %>% select(Target_Price_4, Rev_Potential,Closing, Market_Price_mn, Sector) %>%
+  mutate(potential = Rev_Potential*Target_Price_4/100, Target_Price_4, Rev_Potential) %>%
+  group_by(Sector) %>%
+  summarise(count= n(), tot_potential=sum(potential, na.rm=T), avg_targetprice=mean(Target_Price_4, na.rm=T),
+            avg_potential=mean(Rev_Potential, na.rm=T), avg_closing=mean(Closing))
+
+
+summary_price_merged %>% select(Target_Price_4, Rev_Potential,Closing, Market_Price_mn, Sector, Kod) %>%
+  mutate(potential = Rev_Potential*Target_Price_4/100, Target_Price_4, Rev_Potential) %>%
+  group_by(Sector, Kod) %>%
+  summarise(tot_potential=sum(potential, na.rm=T), avg_targetprice=mean(Target_Price_4, na.rm=T),
+            avg_potential=mean(Rev_Potential, na.rm=T)) %>%
+  arrange(desc(tot_potential)) %>%
+  head(10)
+
+```
+
+### Target Price and Suggestions
+
+
+I wanted to see if there is any correlation between target price and potential return. In the first graph you can see aroun 50 TL of target price potential return is increasing but after 50 it decreases.
+
+And in the second figure you can see suggestion type counts by sector. It is interesting that only suggestions of 'keep' is higher for 'GYO' sector.
+
+```{r price, figures-side2, fig.show="hold", out.width="50%", echo=TRUE, message=FALSE, warning=FALSE}
+
+summary_price_merged %>% 
+  select(Kod, Target_Price_4, Rev_Potential,Closing, Market_Price_mn, Sector) %>%
+  filter(Kod!='OTKAR') %>%
+  mutate(potential = Rev_Potential*Target_Price_4/100, Target_Price_4, Rev_Potential) %>%
+  ggplot(aes(x=Target_Price_4, y=potential, size=Closing, color=Sector))+
+  geom_point()+
+  facet_grid(Sector ~., scales = "free")+
+  labs(title =" Target Price vs. Potential Return", x = "Target Price", y = "Potential Return") 
+
+
+suggestion_sector <- 
+  summary_price_merged %>% select(Sector, Suggestion_4) %>%
+  group_by(Sector, Suggestion_4)
+
+ggplot(suggestion_sector, aes(x= Sector, fill=Suggestion_4))+
+  geom_bar(position='dodge')+
+  labs(title ="Suggestion Counts by Sectors", x = "Sector", y = "Count") 
+
+```
+
+### Change in Target Prices
+
+```{r  echo=TRUE, message=FALSE, warning=FALSE}
+change_price <- 
+  summary_price_merged %>% select(Kod, Target_Price, Target_Price_3, Target_Price_4) %>%
+  mutate(change_1=(Target_Price_3/Target_Price-1)*100, change_2=(Target_Price_4/Target_Price_3-1)*100, 
+         tot_chane=(Target_Price_4/Target_Price-1)*100)
+
+firstchangevalue <- change_price %>% summarise(avg_change=mean(change_1, na.rm = T))
+totchangevalue <- change_price %>% summarise(avg_change=mean(tot_chane, na.rm = T))
+```
+
+Lastly I wanted to check what percentage of predictions on target prices had changed.
+
+And after the first assumption, target price assumptions had changed `r firstchangevalue` percent. And at last `r totchangevalue` percent had change. So we can conclude in one month the change in predictions are really low.
+
+In below graphs you can see only 7 of the companies' target price has increased from the initial plan. Other than these, 50 companies' target price decreased so we can assume companies' values are decreasing by a higher percentage.
+
+```{r last, figures-side2, fig.show="hold", out.width="50%", echo=TRUE, message=FALSE, warning=FALSE}
+
+change_price %>% arrange(desc(tot_chane)) %>% head(15) %>%
+  ggplot(aes(x=reorder(Kod, tot_chane), y=tot_chane))+
+  geom_bar(position = "stack", stat = "identity")+
+  coord_flip()+
+  labs(title =" Target Price Change by Company", x = "Company Code", y = "Change %") 
+
+change_price %>% arrange(desc(tot_chane)) %>% tail(15) %>% filter(is.na(tot_chane)!= TRUE) %>%
+  ggplot(aes(x=reorder(Kod, tot_chane), y=tot_chane, fill='red'))+
+  geom_bar(position = "stack", stat = "identity")+
+  coord_flip()+
+  labs(title =" Target Price Change by Company", x = "Company Code", y = "Change %") 
+
+
+```
